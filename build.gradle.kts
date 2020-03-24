@@ -1,6 +1,10 @@
 plugins {
-  kotlin("multiplatform") version "1.3.71"
+    kotlin("multiplatform") version "1.3.71"
+    `maven-publish`
 }
+
+group = "org.araqnid.kotlin.arg-parser"
+version = "0.0.0"
 
 repositories {
     jcenter()
