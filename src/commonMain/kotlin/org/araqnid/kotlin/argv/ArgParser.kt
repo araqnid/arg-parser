@@ -18,7 +18,23 @@ class ArgParser(private val appName: String) {
             }
             else if (!inArgumentList) {
                 if (inputString.startsWith("--")) {
-                    TODO("long options")
+                    val valueSeparator = inputString.indexOf('=')
+                    if (valueSeparator < 0) {
+                        val optionName = inputString.substring(2)
+                        val option = optionsByName[optionName] ?: error("Unknown option '--$optionName'")
+                        if (option.argType.needsArgument) {
+                            option.acceptArg(inputIterator.next())
+                        }
+                        else {
+                            option.acceptArg("")
+                        }
+                    }
+                    else {
+                        val optionName = inputString.substring(2 until valueSeparator)
+                        val option = optionsByName[optionName] ?: error("Unknown option '--$optionName'")
+                        option.acceptArg(inputString.substring(valueSeparator + 1))
+                    }
+                    continue
                 }
                 else if (inputString.startsWith("-")) {
                     val firstOption = findOption(inputString[1].toString())
@@ -75,10 +91,11 @@ class ArgParser(private val appName: String) {
     }
 
     private fun register(provider: OptionProvider<*, *>) {
-        check(optionsByName[provider.name] == null) { "Option '--${provider.name}' already registered" }
+        val dashyName = camelCaseToDashes(provider.name)
+        check(optionsByName[dashyName] == null) { "Option '--${dashyName}' already registered" }
         check(optionsByShortName[provider.shortName] == null) { "Option '-${provider.shortName}' already registered" }
 
-        optionsByName[provider.name] = provider
+        optionsByName[dashyName] = provider
         optionsByShortName[provider.shortName] = provider
     }
 
@@ -338,6 +355,37 @@ class ArgParser(private val appName: String) {
             }
             register(provider)
             return provider
+        }
+    }
+
+    companion object {
+        internal fun camelCaseToDashes(input: CharSequence): String {
+            return buildString {
+                var lastWasLower = false
+                for (c in input) {
+                    if (c.isSimpleUpperCase()) {
+                        if (lastWasLower) {
+                            lastWasLower = false
+                            append('-')
+                        }
+                        append(c.toSimpleLowerCase())
+                    }
+                    else {
+                        append(c)
+                        lastWasLower = true
+                    }
+                }
+            }
+        }
+
+        private fun Char.isSimpleUpperCase() = this in 'A'..'Z'
+        private fun Char.toSimpleLowerCase(): Char {
+            return if (this in 'A'..'Z') {
+                val offset = this - 'A'
+                "abcdefghijklmnopqrstuvwxyz"[offset]
+            } else {
+                this
+            }
         }
     }
 }

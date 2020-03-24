@@ -42,6 +42,36 @@ class ArgParserTest {
     }
 
     @Test
+    fun accepts_long_option_for_valueless_option() {
+        val parser = ArgParser("test")
+        val verbose by parser.option(ArgType.BOOLEAN, "v", "Verbose mode")
+        val dryRun by parser.option(ArgType.BOOLEAN, "n", "Dry-run mode")
+        parser.parse(listOf("--verbose", "--dry-run"))
+        assertEquals(true, verbose)
+        assertEquals(true, dryRun)
+    }
+
+    @Test
+    fun accepts_long_option_with_attached_value() {
+        val parser = ArgParser("test")
+        val environment by parser.option(ArgType.STRING, "e", "Environment")
+        val application by parser.option(ArgType.STRING, "a", "Application")
+        parser.parse(listOf("--environment=latest", "--application=TestApp"))
+        assertEquals("latest", environment)
+        assertEquals("TestApp", application)
+    }
+
+    @Test
+    fun accepts_long_option_with_subsequent_value() {
+        val parser = ArgParser("test")
+        val environment by parser.option(ArgType.STRING, "e", "Environment")
+        val application by parser.option(ArgType.STRING, "a", "Application")
+        parser.parse(listOf("--environment", "latest", "--application", "TestApp"))
+        assertEquals("latest", environment)
+        assertEquals("TestApp", application)
+    }
+
+    @Test
     fun missing_options_provided_as_null() {
         val parser = ArgParser("test")
         val environment by parser.option(ArgType.STRING, "e", "Environment")
