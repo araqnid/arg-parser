@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "org.araqnid.kotlin.arg-parser"
-version = "0.0.0"
+version = "0.0.0-kotlin14"
 
 repositories {
     jcenter()
@@ -22,18 +22,8 @@ kotlin {
         nodejs { }
     }
     linuxX64 {
-        binaries {
-            executable {
-                entryPoint = "org.araqnid.kotlin.argv.main"
-            }
-        }
     }
     macosX64 {
-        binaries {
-            executable {
-                entryPoint = "org.araqnid.kotlin.argv.main"
-            }
-        }
     }
 
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.Kotlin2JsCompile>().configureEach {
