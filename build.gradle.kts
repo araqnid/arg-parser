@@ -1,5 +1,5 @@
 plugins {
-    kotlin("multiplatform") version "1.3.71"
+    kotlin("multiplatform") version "1.4-M1"
     `maven-publish`
 }
 
@@ -8,6 +8,7 @@ version = "0.0.0"
 
 repositories {
     jcenter()
+    maven(url = "https://dl.bintray.com/kotlin/kotlin-eap")
 }
 
 java {
@@ -19,7 +20,24 @@ kotlin {
     jvm { }
     js {
         nodejs { }
-        useCommonJs()
+    }
+    linuxX64 {
+        binaries {
+            executable {
+                entryPoint = "org.araqnid.kotlin.argv.main"
+            }
+        }
+    }
+    macosX64 {
+        binaries {
+            executable {
+                entryPoint = "org.araqnid.kotlin.argv.main"
+            }
+        }
+    }
+
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.Kotlin2JsCompile>().configureEach {
+        kotlinOptions.moduleKind = "commonjs"
     }
 
     sourceSets["commonMain"].dependencies {
