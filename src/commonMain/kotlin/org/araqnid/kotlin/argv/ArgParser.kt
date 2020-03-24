@@ -342,4 +342,4 @@ class ArgParser(private val appName: String) {
     }
 }
 
-fun ArgParser.parse(args: Array<String>) = parse(args.toList())
+fun ArgParser.parse(args: Array<out String>) = parse(args.toList())
