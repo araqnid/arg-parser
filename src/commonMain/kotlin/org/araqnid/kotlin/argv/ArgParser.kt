@@ -312,7 +312,7 @@ class ArgParser(private val appName: String) {
     inner class MandatoryVarargArgumentDefinition<T>(val argType: ArgType<T>, val description: String) {
         operator fun provideDelegate(owner: Any?, property: KProperty<*>): ArgumentProvider<T, List<T>> {
             val provider = object : ArgumentProvider<T, List<T>>(argType, property.name, description, multiple = true) {
-                var values: List<T> = mutableListOf()
+                val values: MutableList<T> = mutableListOf()
 
                 override fun acceptArg(arg: String) {
                     values += argType.read(arg)
@@ -328,7 +328,7 @@ class ArgParser(private val appName: String) {
     inner class OptionalVarargArgumentDefinition<T>(val argType: ArgType<T>, val description: String) {
         operator fun provideDelegate(owner: Any?, property: KProperty<*>): ArgumentProvider<T, List<T>> {
             val provider = object : ArgumentProvider<T, List<T>>(argType, property.name, description, multiple = true) {
-                var values: List<T> = mutableListOf()
+                val values: MutableList<T> = mutableListOf()
 
                 override fun acceptArg(arg: String) {
                     values += argType.read(arg)
