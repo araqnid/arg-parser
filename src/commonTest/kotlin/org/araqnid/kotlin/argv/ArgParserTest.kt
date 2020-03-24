@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ArgParserTest {
     @Test
@@ -19,6 +20,7 @@ class ArgParserTest {
         parser.parse(listOf("-nv"))
         assertEquals(true, verbose)
         assertEquals(true, dryRun)
+        assertEquals("""[ -v | --verbose ] [ -n | --dry-run ]""", parser.buildSyntax())
     }
 
     @Test
@@ -29,6 +31,7 @@ class ArgParserTest {
         parser.parse(listOf("-elatest", "-aTestApp"))
         assertEquals("latest", environment)
         assertEquals("TestApp", application)
+        assertEquals("""[ -e <environment> | --environment=<value> ] [ -a <application> | --application=<value> ]""", parser.buildSyntax())
     }
 
     @Test
@@ -107,6 +110,7 @@ class ArgParserTest {
         val filter by parser.option(ArgType.STRING, "f", "Filter").multiple()
         parser.parse(listOf("-fred", "-fblue"))
         assertEquals(listOf("red", "blue"), filter)
+        assertEquals("""[ -f <filter> | --filter=<value> ]...""", parser.buildSyntax())
     }
 
     @Test
@@ -134,6 +138,7 @@ class ArgParserTest {
         )
         parser.parse(listOf("-srs"))
         assertEquals(listOf("status" to true, "resolve" to true, "status" to true), actions)
+        assertEquals("""[ -s | --status | -r | --resolve ]...""", parser.buildSyntax())
     }
 
     @Test
@@ -194,5 +199,19 @@ class ArgParserTest {
         val actions by parser.argument(ArgType.STRING, "action").optional().vararg()
         parser.parse(listOf())
         assertEquals(listOf(), actions)
+    }
+
+    @Test
+    fun always_accepts_help_long_option() {
+        val parser = ArgParser("test")
+        parser.parse(listOf("--help"))
+        assertTrue(parser.helpNeeded)
+    }
+
+    @Test
+    fun always_accepts_help_short_option() {
+        val parser = ArgParser("test")
+        parser.parse(listOf("-h"))
+        assertTrue(parser.helpNeeded)
     }
 }

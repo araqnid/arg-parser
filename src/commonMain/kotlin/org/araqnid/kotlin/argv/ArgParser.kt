@@ -6,6 +6,24 @@ class ArgParser(private val appName: String) {
     private val optionsByName = mutableMapOf<String, OptionProvider<*, *>>()
     private val optionsByShortName = mutableMapOf<String, OptionProvider<*, *>>()
     private val arguments = mutableListOf<ArgumentProvider<*, *>>()
+    var helpNeeded = false
+        private set
+
+    init {
+        val help = object : OptionProvider<Boolean, Boolean>(ArgType.BOOLEAN, "h", "help", "Provide syntax summary") {
+            override fun acceptArg(arg: String) {
+                helpNeeded = argType.read(arg)
+            }
+
+            override fun appendSyntaxSummary(output: Appendable) {
+            }
+
+            override fun produce(): Boolean {
+                return helpNeeded
+            }
+        }
+        register(help)
+    }
 
     fun parse(args: Iterable<String>) {
         val inputIterator = args.iterator()
@@ -70,32 +88,38 @@ class ArgParser(private val appName: String) {
         }
     }
 
-    fun provideHelp(output: Appendable) {
-        output.append("Syntax: ").append(appName)
-        for (option in optionsByName.values) {
-            if (option.argType.needsArgument) {
-                output.append(" -${option.shortName} ${option.name}")
+    fun buildSyntax(): String {
+        return buildString {
+            val seenGroups = mutableSetOf<String>()
+            for (option in optionsByName.values) {
+                if (!seenGroups.add(option.group)) continue
+                append(' ')
+                option.appendSyntaxSummary(this)
             }
-            else {
-                output.append(" -${option.shortName}")
+            for (argument in arguments) {
+                when {
+                    argument.multiple && argument.optional -> {
+                        append(" [${argument.name}...]")
+                    }
+                    argument.multiple -> {
+                        append(" ${argument.name}...")
+                    }
+                    argument.optional -> {
+                        append(" [${argument.name}]")
+                    }
+                    else -> {
+                        append(" ${argument.name}")
+                    }
+                }
             }
-        }
-        for (argument in arguments) {
-            if (argument.multiple) {
-                output.append(" ${argument.name}...")
-            }
-            else {
-                output.append(" ${argument.name}")
-            }
-        }
+        }.trimStart()
     }
 
     private fun register(provider: OptionProvider<*, *>) {
-        val dashyName = camelCaseToDashes(provider.name)
-        check(optionsByName[dashyName] == null) { "Option '--${dashyName}' already registered" }
+        check(optionsByName[provider.longName] == null) { "Option '--${provider.longName}' already registered" }
         check(optionsByShortName[provider.shortName] == null) { "Option '-${provider.shortName}' already registered" }
 
-        optionsByName[dashyName] = provider
+        optionsByName[provider.longName] = provider
         optionsByShortName[provider.shortName] = provider
     }
 
@@ -123,11 +147,16 @@ class ArgParser(private val appName: String) {
         val argType: ArgType<T>,
         val shortName: String,
         val name: String,
-        val description: String
+        val description: String,
+        val group: String = name
     ) {
+        val longName = camelCaseToDashes(name)
+
         abstract fun acceptArg(arg: String)
 
         abstract fun produce(): U
+
+        abstract fun appendSyntaxSummary(output: Appendable)
 
         operator fun getValue(owner: Any?, property: KProperty<*>): U = produce()
     }
@@ -136,7 +165,8 @@ class ArgParser(private val appName: String) {
         val argType: ArgType<T>,
         val name: String,
         val description: String,
-        val multiple: Boolean
+        val multiple: Boolean,
+        val optional: Boolean
     ) {
         abstract fun acceptArg(arg: String)
 
@@ -161,6 +191,10 @@ class ArgParser(private val appName: String) {
                     value = argType.read(arg)
                 }
 
+                override fun appendSyntaxSummary(output: Appendable) {
+                    output.append("")
+                }
+
                 override fun produce(): T = value ?: defaultProvider()
             }
             register(provider)
@@ -174,13 +208,26 @@ class ArgParser(private val appName: String) {
         val description: String
     ) {
         operator fun provideDelegate(owner: Any?, property: KProperty<*>): OptionProvider<T, T?> {
-            val provider = object : OptionProvider<T, T?>(argType, shortName, property.name, description) {
+            val provider = object : OptionProvider<T, T?>(argType, shortName, property.name, description
+            ) {
                 var value: T? = null
                 var specified: Boolean = false
 
                 override fun acceptArg(arg: String) {
                     if (specified) error("Option '$name' has already been specified")
                     value = argType.read(arg)
+                }
+
+                override fun appendSyntaxSummary(output: Appendable) {
+                    output.apply {
+                        append("[ -")
+                        append(shortName)
+                        if (argType.needsArgument) append(" <$name>")
+                        append(" | --")
+                        append(longName)
+                        if (argType.needsArgument) append("=<value>")
+                        append(" ]")
+                    }
                 }
 
                 override fun produce(): T? = value
@@ -208,11 +255,24 @@ class ArgParser(private val appName: String) {
         val description: String
     ) {
         operator fun provideDelegate(owner: Any?, property: KProperty<*>): OptionProvider<T, List<T>> {
-            val provider = object : OptionProvider<T, List<T>>(argType, shortName, property.name, description) {
-                var values: List<T> = mutableListOf()
+            val provider = object : OptionProvider<T, List<T>>(argType, shortName, property.name, description
+            ) {
+                val values: MutableList<T> = mutableListOf()
 
                 override fun acceptArg(arg: String) {
                     values += argType.read(arg)
+                }
+
+                override fun appendSyntaxSummary(output: Appendable) {
+                    output.apply {
+                        append("[ -")
+                        append(shortName)
+                        if (argType.needsArgument) append(" <$name>")
+                        append(" | --")
+                        append(longName)
+                        if (argType.needsArgument) append("=<value>")
+                        append(" ]...")
+                    }
                 }
 
                 override fun produce(): List<T> = values
@@ -230,9 +290,15 @@ class ArgParser(private val appName: String) {
         operator fun provideDelegate(owner: Any?, property: KProperty<*>): GroupCollector<T> {
             val values = mutableListOf<Pair<String, T>>()
             for ((name, shortName) in options) {
-                register(object : OptionProvider<T, T>(argType, shortName, name, "description for $name") {
+                register(object : OptionProvider<T, T>(argType, shortName, name, "description for $name", group = options[0].first) {
                     override fun acceptArg(arg: String) {
                         values += name to this.argType.read(arg)
+                    }
+
+                    override fun appendSyntaxSummary(output: Appendable) {
+                        output.apply {
+                            options.joinTo(output, " | ", prefix = "[ ", postfix = " ]...") { "-${it.second} | --${it.first}" }
+                        }
                     }
 
                     override fun produce(): T {
@@ -246,7 +312,7 @@ class ArgParser(private val appName: String) {
 
     inner class MandatoryArgumentDefinition<T>(val argType: ArgType<T>, val description: String) {
         operator fun provideDelegate(owner: Any?, property: KProperty<*>): ArgumentProvider<T, T> {
-            val provider = object : ArgumentProvider<T, T>(argType, property.name, description, multiple = false) {
+            val provider = object : ArgumentProvider<T, T>(argType, property.name, description, multiple = false, optional = false) {
                 var value: T? = null
                 var specified: Boolean = false
 
@@ -281,7 +347,7 @@ class ArgParser(private val appName: String) {
 
     inner class DefaultedArgumentDefinition<T>(val argType: ArgType<T>, val description: String, val defaultProvider: () -> T) {
         operator fun provideDelegate(owner: Any?, property: KProperty<*>): ArgumentProvider<T, T> {
-            val provider = object : ArgumentProvider<T, T>(argType, property.name, description, multiple = false) {
+            val provider = object : ArgumentProvider<T, T>(argType, property.name, description, multiple = false, optional = true) {
                 var value: T? = null
                 var specified: Boolean = false
 
@@ -305,7 +371,7 @@ class ArgParser(private val appName: String) {
 
     inner class OptionalArgumentDefinition<T>(val argType: ArgType<T>, val description: String) {
         operator fun provideDelegate(owner: Any?, property: KProperty<*>): ArgumentProvider<T, T?> {
-            val provider = object : ArgumentProvider<T, T?>(argType, property.name, description, multiple = false) {
+            val provider = object : ArgumentProvider<T, T?>(argType, property.name, description, multiple = false, optional = true) {
                 var value: T? = null
                 var specified: Boolean = false
 
@@ -328,7 +394,7 @@ class ArgParser(private val appName: String) {
 
     inner class MandatoryVarargArgumentDefinition<T>(val argType: ArgType<T>, val description: String) {
         operator fun provideDelegate(owner: Any?, property: KProperty<*>): ArgumentProvider<T, List<T>> {
-            val provider = object : ArgumentProvider<T, List<T>>(argType, property.name, description, multiple = true) {
+            val provider = object : ArgumentProvider<T, List<T>>(argType, property.name, description, multiple = true, optional = false) {
                 val values: MutableList<T> = mutableListOf()
 
                 override fun acceptArg(arg: String) {
@@ -344,7 +410,7 @@ class ArgParser(private val appName: String) {
 
     inner class OptionalVarargArgumentDefinition<T>(val argType: ArgType<T>, val description: String) {
         operator fun provideDelegate(owner: Any?, property: KProperty<*>): ArgumentProvider<T, List<T>> {
-            val provider = object : ArgumentProvider<T, List<T>>(argType, property.name, description, multiple = true) {
+            val provider = object : ArgumentProvider<T, List<T>>(argType, property.name, description, multiple = true, optional = true) {
                 val values: MutableList<T> = mutableListOf()
 
                 override fun acceptArg(arg: String) {
@@ -389,5 +455,3 @@ class ArgParser(private val appName: String) {
         }
     }
 }
-
-fun ArgParser.parse(args: Array<out String>) = parse(args.toList())
