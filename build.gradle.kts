@@ -1,11 +1,10 @@
 plugins {
     kotlin("multiplatform") version "1.3.71"
     `maven-publish`
-    id("com.jfrog.bintray") version "1.8.4"
 }
 
 group = "org.araqnid.kotlin.arg-parser"
-version = "0.0.2"
+version = "0.0.3"
 
 repositories {
     jcenter()
@@ -52,33 +51,16 @@ kotlin {
 dependencies {
 }
 
-tasks.withType<com.jfrog.bintray.gradle.tasks.BintrayUploadTask> {
-    doFirst {
-        publishing.publications
-            .filterIsInstance<MavenPublication>()
-            .forEach { publication ->
-                val moduleFile = buildDir.resolve("publications/${publication.name}/module.json")
-                if (moduleFile.exists()) {
-                    publication.artifact(object : org.gradle.api.publish.maven.internal.artifact.FileBasedMavenArtifact(moduleFile) {
-                        override fun getDefaultExtension() = "module"
-                    })
-                }
+publishing {
+    val bintrayUser = (project.properties["bintray.user"] ?: "").toString()
+    val bintrayKey = (project.properties["bintray.apiKey"] ?: "").toString()
+    repositories {
+        maven(url = "https://api.bintray.com/maven/araqnid/maven/arg-parser/;publish=1") {
+            name = "bintray"
+            credentials {
+                username = bintrayUser
+                password = bintrayKey
             }
-    }
-}
-
-bintray {
-    user = (project.properties["bintray.user"] ?: "").toString()
-    key = (project.properties["bintray.apiKey"] ?: "").toString()
-    publish = true
-    setPublications("js", "jvm", "kotlinMultiplatform", "metadata")
-    pkg.repo = "maven"
-    pkg.name = "arg-parser"
-    pkg.setLicenses("Apache-2.0")
-    pkg.vcsUrl = "https://github.com/araqnid/arg-parser"
-    pkg.desc = "Command-line parser for Kotlin"
-    if (project.version != Project.DEFAULT_VERSION) {
-        pkg.version.name = project.version.toString()
-        pkg.version.vcsTag = "v" + project.version
+        }
     }
 }
