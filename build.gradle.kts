@@ -1,10 +1,11 @@
 plugins {
     kotlin("multiplatform") version "1.3.71"
     `maven-publish`
+    id("com.jfrog.bintray") version "1.8.4"
 }
 
 group = "org.araqnid.kotlin.arg-parser"
-version = "0.0.0"
+version = "0.0.1"
 
 repositories {
     jcenter()
@@ -49,4 +50,20 @@ kotlin {
 }
 
 dependencies {
+}
+
+bintray {
+    user = (project.properties["bintray.user"] ?: "").toString()
+    key = (project.properties["bintray.apiKey"] ?: "").toString()
+    publish = true
+    setPublications("js", "jvm", "kotlinMultiplatform", "metadata")
+    pkg.repo = "maven"
+    pkg.name = "arg-parser"
+    pkg.setLicenses("Apache-2.0")
+    pkg.vcsUrl = "https://github.com/araqnid/arg-parser"
+    pkg.desc = "Command-line parser for Kotlin"
+    if (project.version != Project.DEFAULT_VERSION) {
+        pkg.version.name = project.version.toString()
+        pkg.version.vcsTag = "v" + project.version
+    }
 }
