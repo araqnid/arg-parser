@@ -143,7 +143,7 @@ class ArgParser(private val appName: String) {
         return MandatoryArgumentDefinition(type, description)
     }
 
-    abstract inner class OptionProvider<out T, out U>(
+    abstract class OptionProvider<out T, out U>(
         val argType: ArgType<T>,
         val shortName: String,
         val name: String,
@@ -161,7 +161,7 @@ class ArgParser(private val appName: String) {
         operator fun getValue(owner: Any?, property: KProperty<*>): U = produce()
     }
 
-    abstract inner class ArgumentProvider<out T, out U>(
+    abstract class ArgumentProvider<out T, out U>(
         val argType: ArgType<T>,
         val name: String,
         val description: String,
