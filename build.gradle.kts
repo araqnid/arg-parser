@@ -1,10 +1,15 @@
+import java.net.URI
+
 plugins {
     kotlin("multiplatform") version "1.4.30"
     `maven-publish`
+    signing
 }
 
 group = "org.araqnid.kotlin.arg-parser"
 version = "0.1.1"
+
+description = "Command-line arguments parser"
 
 repositories {
     mavenCentral()
@@ -33,14 +38,68 @@ dependencies {
     "jsTestImplementation"(kotlin("test-js"))
 }
 
+tasks {
+    withType<Jar>().configureEach {
+        manifest {
+            attributes["Implementation-Title"] = project.description ?: project.name
+            attributes["Implementation-Version"] = project.version
+        }
+    }
+}
+
+val javadocJar = tasks.register("javadocJar", Jar::class.java) {
+    archiveClassifier.set("javadoc")
+}
+
 publishing {
-    repositories {
-        maven(url = "https://maven.pkg.github.com/araqnid/arg-parser") {
-            name = "github"
-            credentials {
-                username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
-                password = project.findProperty("gpr.key") as String? ?: System.getenv("GITHUB_TOKEN")
+    publications {
+        withType<MavenPublication> {
+            artifact(javadocJar)
+            pom {
+                name.set(project.name)
+                description.set(project.description)
+                licenses {
+                    license {
+                        name.set("Apache")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+                url.set("https://github.com/araqnid/arg-parser")
+                issueManagement {
+                    system.set("Github")
+                    url.set("https://github.com/araqnid/arg-parser/issues")
+                }
+                scm {
+                    connection.set("https://github.com/araqnid/arg-parser.git")
+                    url.set("https://github.com/araqnid/arg-parser")
+                }
+                developers {
+                    developer {
+                        name.set("Steven Haslam")
+                        email.set("araqnid@gmail.com")
+                    }
+                }
             }
         }
     }
+
+    repositories {
+        val sonatypeUser: String? by project
+        if (sonatypeUser != null) {
+            maven {
+                name = "OSSRH"
+                url = URI("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
+                val sonatypePassword: String by project
+                credentials {
+                    username = sonatypeUser
+                    password = sonatypePassword
+                }
+            }
+        }
+    }
+}
+
+signing {
+    useGpgCmd()
+    sign(publishing.publications)
 }
