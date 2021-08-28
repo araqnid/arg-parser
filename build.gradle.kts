@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "org.araqnid.kotlin.arg-parser"
-version = "0.1.1"
+version = "0.1.2"
 
 description = "Command-line arguments parser"
 
