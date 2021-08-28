@@ -142,6 +142,14 @@ class ArgParserTest {
     }
 
     @Test
+    fun arguments_are_specified_from_command_line() {
+        val parser = ArgParser("test")
+        val inputDir by parser.argument(ArgType.STRING, "input directory")
+        parser.parse(listOf("/path/to/example"))
+        assertEquals("/path/to/example", inputDir)
+    }
+
+    @Test
     fun arguments_are_mandatory() {
         val parser = ArgParser("test")
         val inputDir by parser.argument(ArgType.STRING, "input directory")

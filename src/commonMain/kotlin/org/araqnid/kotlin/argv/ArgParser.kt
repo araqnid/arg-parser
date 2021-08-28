@@ -319,6 +319,7 @@ class ArgParser(private val appName: String) {
                 override fun acceptArg(arg: String) {
                     if (specified) error("Argument '$name' has already been specified")
                     value = argType.read(arg)
+                    specified = true
                 }
 
                 @Suppress("UNCHECKED_CAST")
