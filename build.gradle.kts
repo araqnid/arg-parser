@@ -1,7 +1,7 @@
 import java.net.URI
 
 plugins {
-    kotlin("multiplatform") version "1.5.31"
+    kotlin("multiplatform") version "1.6.10"
     `maven-publish`
     signing
 }
