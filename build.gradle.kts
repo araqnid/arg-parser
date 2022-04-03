@@ -1,13 +1,13 @@
 import java.net.URI
 
 plugins {
-    kotlin("multiplatform") version "1.5.31"
+    kotlin("multiplatform") version "1.6.20"
     `maven-publish`
     signing
 }
 
 group = "org.araqnid.kotlin.arg-parser"
-version = "0.1.2"
+version = "0.2.0"
 
 description = "Command-line arguments parser"
 
